@@ -2,7 +2,7 @@ import os
 from datetime import datetime
 from time import sleep
 
-devices = ["192.168.178.56", "192.168.178.39"]
+devices = ["192.168.178.56", "192.168.178.39","192.168.178.27"]
 
 while True:
     time = datetime.now()
