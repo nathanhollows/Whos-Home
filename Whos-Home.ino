@@ -10,15 +10,11 @@ extern "C"
   #include <lwip/icmp.h> // needed for icmp packet definitions
 }
 
-#ifndef STASSID
-#define STASSID "SSID"
-#define STAPSK  "PASSWORD"
-#endif
+#include "Settings.h"
 
 const char* ssid     = STASSID;
 const char* password = STAPSK;
-b
-bool nathan = false;
+bool isHome = false;
 
 Pinger pinger;
 
@@ -58,12 +54,14 @@ void setup() {
         response.EchoMessageSize - sizeof(struct icmp_echo_hdr),
         response.ResponseTime,
         response.TimeToLive);
-        nathan = true;
+        digitalWrite(LED_BUILTIN, LOW);
+        isHome = true;
     }
     else
     {
       Serial.printf("Request timed out.\r\n");
-      nathan = false;
+        digitalWrite(LED_BUILTIN, HIGH);
+      isHome = false;
     }
     return true;
   });
@@ -124,10 +122,10 @@ void setup() {
 
 void loop() {  
   
-  Serial.printf("\r\n\r\nPinging '192.168.1.150'\r\n");
-  pinger.Ping("192.168.1.150");
+  Serial.printf("\r\n\r\nPinging '192.168.178.56'\r\n");
+  pinger.Ping("192.168.178.56");
   
-  if(!nathan)
+  if(!isHome)
   {
     digitalWrite(LED_BUILTIN, HIGH);
   } else {
