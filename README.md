@@ -9,6 +9,7 @@ So far:
 - Arduino IDE
 - NodeMCU v3
 - Python3 (for testing)
+- ESP8266-ping library (installed through Arduino IDE)
 
 ## Challenges
 
@@ -23,3 +24,4 @@ Our phones don't always respond to pings. They do, however, response to `nmap -s
 - Pictures
 - Test nmap, looking for consistent results
 - Switch from pinging to TCP requests on controller
+- Use flash button on controller to search again (or another wired button)
