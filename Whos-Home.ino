@@ -12,8 +12,11 @@ extern "C"
 
 #include "Settings.h"
 
-const char* ssid     = STASSID;
-const char* password = STAPSK;
+const char* ssid      = STASSID;
+const char* password  = STAPSK;
+const char* names[]   = NAME;
+const char* devices[] = DEVICEIP;
+const int   devicenum = DEVICEAMOUNT;
 bool isHome = false;
 
 Pinger pinger;
@@ -44,10 +47,8 @@ void setup() {
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
 
-  pinger.OnReceive([](const PingerResponse& response)
-  {
-    if (response.ReceivedResponse)
-    {
+  pinger.OnReceive([](const PingerResponse& response){
+    if (response.ReceivedResponse){
       Serial.printf(
         "Reply from %s: bytes=%d time=%lums TTL=%d\r\r\n",
         response.DestIPAddress.toString().c_str(),
@@ -56,9 +57,7 @@ void setup() {
         response.TimeToLive);
         digitalWrite(LED_BUILTIN, LOW);
         isHome = true;
-    }
-    else
-    {
+    } else{
       Serial.printf("Request timed out.\r\n");
         digitalWrite(LED_BUILTIN, HIGH);
       isHome = false;
@@ -66,12 +65,10 @@ void setup() {
     return true;
   });
   
-  pinger.OnEnd([](const PingerResponse& response)
-  {
+  pinger.OnEnd([](const PingerResponse& response) {
     // Evaluate lost packet percentage
     float loss = 100;
-    if(response.TotalReceivedResponses > 0)
-    {
+    if(response.TotalReceivedResponses > 0){
       loss = (response.TotalSentRequests - response.TotalReceivedResponses) * 100 / response.TotalSentRequests;
     }
     
@@ -87,8 +84,7 @@ void setup() {
       loss);
 
     // Print time information
-    if(response.TotalReceivedResponses > 0)
-    {
+    if(response.TotalReceivedResponses > 0) {
       Serial.printf("Approximate round trip times in milli-seconds:\r\n");
       Serial.printf(
         "    Minimum = %lums, Maximum = %lums, Average = %.2fms\r\n",
@@ -102,14 +98,12 @@ void setup() {
     Serial.printf(
       "    IP address: %s\r\n",
       response.DestIPAddress.toString().c_str());
-    if(response.DestMacAddress != nullptr)
-    {
+    if(response.DestMacAddress != nullptr) {
       Serial.printf(
         "    MAC address: " MACSTR "\r\n",
         MAC2STR(response.DestMacAddress->addr));
     }
-    if(response.DestHostname != "")
-    {
+    if(response.DestHostname != "") {
       Serial.printf(
         "    DNS name: %s\r\n",
         response.DestHostname.c_str());
@@ -121,22 +115,29 @@ void setup() {
 }
 
 void loop() {  
-  
-  Serial.printf("\r\n\r\nPinging '192.168.178.56'\r\n");
-  pinger.Ping("192.168.178.56");
-  
-  if(!isHome)
-  {
-    digitalWrite(LED_BUILTIN, HIGH);
-  } else {
-    for (int i = 0; i < 5; i++) {
-      digitalWrite(LED_BUILTIN, LOW);
-      delay(100);
-      digitalWrite(LED_BUILTIN, HIGH);
-      delay(100);
-    }
-    digitalWrite(LED_BUILTIN, LOW);
-  }
 
+  //Cycle through names and devices and pings them all
+  Serial.printf("Checking who is connected...\n");
+  int num;
+  for (num = 0; num < devicenum; num++){
+    Serial.printf("Name: %s\n", names[num]);
+
+    Serial.printf("Pinging device on %s\n", devices[num]);
+    pinger.Ping(devices[num]);
+    delay(5000);
+  
+    if(!isHome){
+      digitalWrite(LED_BUILTIN, HIGH);
+    } else {
+      for (int i = 0; i < 5; i++) {
+        digitalWrite(LED_BUILTIN, LOW);
+        delay(100);
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+  }
+  digitalWrite(LED_BUILTIN, HIGH);
   delay(300000);
 }
