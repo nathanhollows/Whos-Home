@@ -1,7 +1,7 @@
 #ifndef STASSID
-#define STASSID    "ssid"
-#define STAPSK     "pw"
-#define NAME      {"name", "name"}
-#define DEVICEIP  {"device_ip", "device_ip"}
-#define DEVICEAMOUNT 1
+#define STASSID    "SSID"
+#define STAPSK     "PW"
+#define NAME      {"NAME_1", "NAME_2"}
+#define DEVICEIP  {"IP_1", "IP_2"}
+#define DEVICEAMOUNT 2
 #endif
