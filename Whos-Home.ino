@@ -5,6 +5,9 @@
 
 #include <ESP8266WiFi.h>
 #include <Pinger.h>
+#include <time.h>
+#include "./esppl_functions.h"
+
 extern "C"
 {
   #include <lwip/icmp.h> // needed for icmp packet definitions
@@ -12,12 +15,15 @@ extern "C"
 
 #include "Settings.h"
 
-const char* ssid      = STASSID;
-const char* password  = STAPSK;
-const char* names[]   = NAME;
-const char* devices[] = DEVICEIP;
-const int   devicenum = DEVICEAMOUNT;
-bool isHome = false;
+const char*   ssid = STASSID;
+const char*   password = STAPSK;
+String        names[DEVICEAMOUNT] = NAME;
+const char*   devices[] = DEVICEIP;
+const int     devicenum = DEVICEAMOUNT;
+uint8_t       friendmac[DEVICEAMOUNT][ESPPL_MAC_LEN] = DEVICEMAC;
+bool          isHome = false;
+unsigned long time_ms;
+int           devicechecknum = 0;
 
 Pinger pinger;
 
@@ -108,25 +114,61 @@ void setup() {
         "    DNS name: %s\r\n",
         response.DestHostname.c_str());
     }
-
     return true;
   });
+  esppl_init(cb);
+}
 
+
+/*
+ * The two functions maccmp and cb check the packets
+ */
+bool maccmp(uint8_t *mac1, uint8_t *mac2) {
+  for (int i=0; i < ESPPL_MAC_LEN; i++) {
+    if (mac1[i] != mac2[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+void cb(esppl_frame_info *info) {
+  for (int i = 0; i < 4; i++){
+    if (maccmp(info->sourceaddr, friendmac[devicechecknum]) || maccmp(info->receiveraddr, friendmac[devicechecknum])) {
+      Serial.printf("%s is here!\n", names[devicechecknum].c_str());
+      time_ms = millis() / 1000;
+      Serial.println(time_ms);
+    }
+  }
 }
 
 void loop() {  
-
   //Cycle through names and devices and pings them all
   Serial.printf("Checking who is connected...\n");
-  int num;
-  for (num = 0; num < devicenum; num++){
-    Serial.printf("Name: %s\n", names[num]);
-
-    Serial.printf("Pinging device on %s\n", devices[num]);
-    pinger.Ping(devices[num]);
-    delay(5000);
   
+  for (devicechecknum = 0; devicechecknum < devicenum; devicechecknum++){
+    Serial.printf("Name: %s\n", names[devicechecknum].c_str());
+
+    Serial.printf("Pinging device on %s\n", devices[devicechecknum]);
+    pinger.Ping(devices[devicechecknum]);
+    delay(10000);
+
+    // If ping doesn't work, sniff packets -- NEED TO WORK ON AND FIGURE OUT TIMES
+    // Remove the while loops maybe?
     if(!isHome){
+      Serial.printf("Checking by packets to see if %s is here\n", names[devicechecknum].c_str());
+      for (int j = 0; j < 4; j++){
+        esppl_sniffing_start();
+        for (int i = ESPPL_CHANNEL_MIN; i <= ESPPL_CHANNEL_MAX; i++ ) {
+          esppl_set_channel(i);
+          while (esppl_process_frames()) {
+            //
+          }
+        }
+        delay(5000);
+        esppl_sniffing_stop();
+        Serial.printf("J:%d\n", j);
+      }
       digitalWrite(LED_BUILTIN, HIGH);
     } else {
       for (int i = 0; i < 5; i++) {
@@ -139,5 +181,7 @@ void loop() {
     }
   }
   digitalWrite(LED_BUILTIN, HIGH);
+  Serial.println("Finished checking, starting delay...");
+  devicechecknum = 0;
   delay(300000);
 }
