@@ -1,4 +1,3 @@
-
 #include "./esppl_functions.h"
 #include <time.h>
 #include "Settings.h"
@@ -18,6 +17,13 @@ unsigned long time_s;
 unsigned long Present[DEVICEAMOUNT];
 int time_until_update = 100; //How many seconds until the person can be considered present
 
+/*
+ * Here you define what pins you will be using
+ * This has to be done manually for how many people you want on the circuit
+ * Make sure that the LED's are in order for correct representation
+ */
+const byte ledPinList[DEVICEAMOUNT] = {D2, D1, D0, D3};
+
 // start variables package - Skickar 2018 hardware LED for NodeMCU on mini breadboard //
 void setup() {
   delay(500);
@@ -25,6 +31,7 @@ void setup() {
   esppl_init(cb);
   for (int i = 0; i < DEVICEAMOUNT; i++){
     Present[i] = 0;
+    pinMode(ledPinList[i], OUTPUT);
   }
 }
 
@@ -39,11 +46,10 @@ bool maccmp(uint8_t *mac1, uint8_t *mac2) {
 
 void printWhosHere(int person){
   time_s = millis() / 1000;
-  if (((Present[person] + time_until_update) < time_s) || (Present[person] == 0)){
-    Present[person] = time_s;
-    Serial.printf("%s is here!\n", friendname[person].c_str());
-    Serial.println(time_s);
-  }
+  Present[person] = time_s;
+  Serial.printf("%s is here!\n", friendname[person].c_str());
+  Serial.println(time_s);
+  digitalWrite(ledPinList[person], HIGH);
 }
 
 void cb(esppl_frame_info *info) {
@@ -61,6 +67,12 @@ void loop() { // I didn't write this part but it sure looks fancy.
       esppl_set_channel(i);
       while (esppl_process_frames()) {
         //
+      }
+    }
+    for (int i = 0; i < DEVICEAMOUNT; i++){
+      time_s = millis() / 1000;
+      if ((Present[i] + time_until_update) < time_s){
+        digitalWrite(ledPinList[i], LOW);
       }
     }
   }
