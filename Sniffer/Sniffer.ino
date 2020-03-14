@@ -14,7 +14,7 @@ uint8_t friendmac[DEVICEAMOUNT][ESPPL_MAC_LEN] = DEVICEMAC;
  */
 String friendname[DEVICEAMOUNT] = NAME;
 unsigned long time_s;
-unsigned long Present[DEVICEAMOUNT];
+unsigned long lastSeen[DEVICEAMOUNT];
 int delayTime[DEVICEAMOUNT] = {100, 100, 100, 100}; //How many seconds until the person can be considered present
 
 /*
@@ -30,7 +30,7 @@ void setup() {
   Serial.begin(115200);
   esppl_init(cb);
   for (int i = 0; i < DEVICEAMOUNT; i++){
-    Present[i] = 0;
+    lastSeen[i] = 0;
     pinMode(ledPinList[i], OUTPUT);
   }
 }
@@ -46,7 +46,7 @@ bool maccmp(uint8_t *mac1, uint8_t *mac2) {
 
 void printWhosHere(int person){
   time_s = millis();
-  Present[person] = time_s;
+  lastSeen[person] = time_s / 1000;
   Serial.printf("%d %s\n", time_s, friendname[person].c_str());
   digitalWrite(ledPinList[person], HIGH);
 }
@@ -70,7 +70,7 @@ void loop() { // I didn't write this part but it sure looks fancy.
     }
     for (int i = 0; i < DEVICEAMOUNT; i++){
       time_s = millis() / 1000;
-      if ((Present[i] + delayTime[i]) < time_s){
+      if (time_s - lastSeen[i] > delayTime[i]){
         digitalWrite(ledPinList[i], LOW);
       }
     }
