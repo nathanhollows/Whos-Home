@@ -210,7 +210,9 @@ void esppl_set_channel(int channel) {
  */
 bool esppl_process_frames() {
   delay(10);
-  return frame_waitlist != 0;
+  while(frame_waitlist != 0) {
+      delay(10);
+  }
 }
 
 /*
