@@ -1,27 +1,33 @@
 # Who's Home
 
-A NodeMCU project that tells me at a glance who is at home. The microprocessor pings devices on the network (set to have static IPs) and toggles a corresponding LED
+A NodeMCU project that tells me at a glance who is home.
 
 ## Tools and Components
 
-So far:
-
 - Arduino IDE
 - NodeMCU v3
-- Python3 (for testing)
-- ESP8266-ping library (installed through Arduino IDE)
+- [RicardoOliveira/FriendDetector](https://github.com/RicardoOliveira/FriendDetector)
 
 ## Challenges
 
-Our phones don't always respond to pings. They do, however, response to `nmap -sN <IP> -p 80`, which, as I understand, sends a TCP request with a sequence 0 that the phone then responds to. This mode of interrogation works when ping does not.
+### Interrogating devices
 
-`/tests/log.py` was used to ping the devices every 5 minutes and log the results
+**Pinging**
+
+Pinging was the first (naive) approach. It turns out that our phones would not always respond to pings so this was quickly scraped.
+
+I wrote a python script to ping network devices and record the frequency of responses. It wasn't feasible.
+
+**nmap**
+
+Each of our devices would respond to `nmap -sN <IP> -p 80`. This would send a TCP packet with sequence 0, and the devices would more often than not respond. This mode of interrogation worked when pinging did not. Turns out it's really hard to make this work so we gave up.
+
+### Broadcast timings vs LED timing
+
+TODO: Write this
 
 ## TODO
 
-- Installation Segment
-- Schematics Segment
+- Installation
+- Schematic
 - Pictures
-- Test nmap, looking for consistent results
-- Switch from pinging to TCP requests on controller
-- Use flash button on controller to search again (or another wired button)
