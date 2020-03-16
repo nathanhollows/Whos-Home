@@ -37,7 +37,7 @@ void printWhosHere(int person){
   // Each phone broadcasts at different intervals
   // Increase delay time if LED is not staying on for long enough
   // Ignores diffferences greater than 10 minutes 
-  if (lastSeen[person] != 0 && difference < 600000 && difference > delayTime[person]) {
+  if (lastSeen[person] != 0 && difference < 600 && difference > delayTime[person]) {
     delayTime[person] += (difference - delayTime[person]) * 1.25;
   }
 
