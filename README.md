@@ -1,33 +1,16 @@
 # Who's Home
 
-A NodeMCU project that tells me at a glance who is home.
+A NodeMCU project that tells me at a glance who is home. The NodeMCU monitors packets and cross references MAC addresses. LED's light up for each person when they are home. The time the light stays on for grows over time, depending on how often phones broadcast in the background. This was built using parts from [RicardoOliveira/FriendDetector](https://github.com/RicardoOliveira/FriendDetector) after giving up pinging and an attempt at sending malformed tcp packets.
 
-## Tools and Components
+## Parts and Installation
 
-- Arduino IDE
 - NodeMCU v3
-- [RicardoOliveira/FriendDetector](https://github.com/RicardoOliveira/FriendDetector)
+- LEDs
+- 220 ohm resisters
 
-## Challenges
-
-### Interrogating devices
-
-**Pinging**
-
-Pinging was the first (naive) approach. It turns out that our phones would not always respond to pings so this was quickly scraped.
-
-I wrote a python script to ping network devices and record the frequency of responses. It wasn't feasible.
-
-**nmap**
-
-Each of our devices would respond to `nmap -sN <IP> -p 80`. This would send a TCP packet with sequence 0, and the devices would more often than not respond. This mode of interrogation worked when pinging did not. Turns out it's really hard to make this work so we gave up.
-
-### Broadcast timings vs LED timing
-
-TODO: Write this
+Compiled and installed using Arduino IDE.
 
 ## TODO
 
-- Installation
 - Schematic
 - Pictures
