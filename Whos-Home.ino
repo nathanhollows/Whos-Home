@@ -1,7 +1,14 @@
-#include "./esppl_functions.h"
 #include <time.h>
 #include <EasyButton.h>
+#include <ESP8266WiFi.h>
+#include <ESP8266WebServer.h>
 #include "Settings.h"
+#include "./esppl_functions.h"
+
+/* configuration  wifi */
+const char *ssid = "Donkey 2 Electric Boogaloo";
+
+ESP8266WebServer server(80);
 
 uint8_t friendmac[DEVICEAMOUNT][ESPPL_MAC_LEN] = DEVICEMAC;
 String friendname[DEVICEAMOUNT] = NAME;
@@ -33,6 +40,26 @@ void setup() {
   DeviceButton.onPressed(deviceReset);
 }
 
+void accessPointMode(){
+  Serial.println("Access Mode");
+  ACMode = true;
+  esppl_sniffing_stop();
+  blinkLED();
+  delay(100);
+  blinkLED();
+  for (int i = 0; i < DEVICEAMOUNT; i++){
+    digitalWrite(ledPinList[i], LOW);
+  }
+  digitalWrite(ledPinList[deviceSelect], HIGH);
+  wifi_promiscuous_enable(false);
+  delay(200);
+  Serial.print("Configuring access point...");
+  WiFi.softAP(ssid);
+  IPAddress myIP = WiFi.softAPIP();
+  Serial.print("AP IP address: ");
+  Serial.println(myIP);
+}
+
 void blinkLED(){
   for (int i = 0; i < DEVICEAMOUNT; i++){
     digitalWrite(ledPinList[i], HIGH);
@@ -43,6 +70,9 @@ void blinkLED(){
 
 void resetState(){
   Serial.println("Resetting");
+  wifi_promiscuous_enable(true);
+  esppl_init(cb);
+  delay(200);
   esppl_sniffing_start();
   for (int i = 0; i < DEVICEAMOUNT; i++){
     Serial.printf("Name: %s, Check: %d\n", friendname[i].c_str(), LEDState[i]);
@@ -65,21 +95,21 @@ void deviceReset(){
   digitalWrite(ledPinList[deviceSelect], HIGH);
 }
 
-void accessPointMode(){
-  Serial.println("Access Mode");
-  ACMode = true;
-  esppl_sniffing_stop();
-  blinkLED();
-  delay(100);
-  blinkLED();
-  for (int i = 0; i < DEVICEAMOUNT; i++){
-    digitalWrite(ledPinList[i], LOW);
+void client_status() {
+  struct station_info *stat_info;
+  stat_info = wifi_softap_get_station_info();
+  
+  while (stat_info != NULL) {
+    for (int i = 0; i < 6; i++){
+      friendmac[deviceSelect][i] = stat_info->bssid[i];
+    }
+    stat_info = STAILQ_NEXT(stat_info, next);
+    delay(300);
   }
-  digitalWrite(ledPinList[deviceSelect], HIGH);
 }
 
 bool maccmp(uint8_t *mac1, uint8_t *mac2) {
-  for (int i=0; i < ESPPL_MAC_LEN; i++) {
+  for (int i=0; i < ESPPL_MAC_LEN; i++){
     if (mac1[i] != mac2[i]) {
       return false;
     }
@@ -133,10 +163,15 @@ void loop() {
     unsigned int AccessTime = millis() / 1000;
     while (AccessTime + 30 > (millis() / 1000)){
       DeviceButton.read();
+      delay(200);
+      server.handleClient();    
+      delay(200);
+      client_status();
       delay(100);
     }
     if (ACMode == true){
       resetState();
+      ACMode = false;
     }
   }
 }
