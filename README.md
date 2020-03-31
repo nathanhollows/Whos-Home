@@ -10,6 +10,8 @@ A NodeMCU project that tells me at a glance who is home. The NodeMCU monitors pa
 
 Compiled and installed using Arduino IDE.
 
+![Schematic](circuit.png)
+
 ## TODO
 
 - Schematic
