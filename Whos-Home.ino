@@ -2,19 +2,19 @@
 #include <EasyButton.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
-#include "Settings.h"
+#include <EEPROM.h>
 #include "./esppl_functions.h"
 
 /* configuration  wifi */
 const char *ssid = "Donkey 2 Electric Boogaloo";
+const int DEVICEAMOUNT = 4;
 
 ESP8266WebServer server(80);
 
-uint8_t friendmac[DEVICEAMOUNT][ESPPL_MAC_LEN] = DEVICEMAC;
-String friendname[DEVICEAMOUNT] = NAME;
+uint8_t friendmac[DEVICEAMOUNT][ESPPL_MAC_LEN];
 unsigned long time_s;
 unsigned long lastSeen[DEVICEAMOUNT];
-const byte ledPinList[DEVICEAMOUNT] = PINS;
+const byte ledPinList[DEVICEAMOUNT] = {D2, D1, D0, D5};
 // Time to light up each LED in seconds
 // Optimises over time
 int delayTime[DEVICEAMOUNT] = {5, 5, 5, 5};
@@ -26,6 +26,7 @@ EasyButton DeviceButton(0);
 bool ACMode = false;
 int deviceSelect = 0;
 
+// Sets up the NodeMCU ready for the program
 void setup() {
   delay(500);
   Serial.begin(115200);
@@ -38,15 +39,27 @@ void setup() {
   DeviceButton.begin();
   AccessButton.onPressed(accessPointMode);
   DeviceButton.onPressed(deviceReset);
+
+  // Gets the MAC addresses from the EEPROM storage
+  EEPROM.begin(24);
+  int addr = 0;
+  for (int device = 0; device < DEVICEAMOUNT; device++){
+    Serial.println("\n");
+    for (int macByte = 0; macByte < 6; macByte++){
+      EEPROM.get(addr, friendmac[device][macByte]);
+      addr++;
+    }
+  }
 }
 
+// Turns the NodeMCU into an access point for devices to connect to
 void accessPointMode(){
   Serial.println("Access Mode");
   ACMode = true;
   esppl_sniffing_stop();
-  blinkLED();
+  blinkLED(true);
   delay(100);
-  blinkLED();
+  blinkLED(true);
   for (int i = 0; i < DEVICEAMOUNT; i++){
     digitalWrite(ledPinList[i], LOW);
   }
@@ -60,14 +73,24 @@ void accessPointMode(){
   Serial.println(myIP);
 }
 
-void blinkLED(){
-  for (int i = 0; i < DEVICEAMOUNT; i++){
-    digitalWrite(ledPinList[i], HIGH);
-    delay(100);
-    digitalWrite(ledPinList[i], LOW);
+// Blinks the LED's and lets the user know they can set their devices
+void blinkLED(bool accessMode){
+  if (accessMode){
+    for (int i = 0; i < DEVICEAMOUNT; i++){
+      digitalWrite(ledPinList[i], HIGH);
+      delay(100);
+      digitalWrite(ledPinList[i], LOW);
+    }
+  } else{
+    for (int i = DEVICEAMOUNT - 1; i > -1; i--){
+      digitalWrite(ledPinList[i], HIGH);
+      delay(100);
+      digitalWrite(ledPinList[i], LOW);
+    }
   }
 }
 
+// Sets the NodeMCU back into sniffing mode and shuts the access point
 void resetState(){
   Serial.println("Resetting");
   wifi_promiscuous_enable(true);
@@ -75,7 +98,6 @@ void resetState(){
   delay(200);
   esppl_sniffing_start();
   for (int i = 0; i < DEVICEAMOUNT; i++){
-    Serial.printf("Name: %s, Check: %d\n", friendname[i].c_str(), LEDState[i]);
     if (LEDState[i] == 1){
       digitalWrite(ledPinList[i], HIGH);
       lastSeen[i] = millis() / 1000;
@@ -85,6 +107,7 @@ void resetState(){
   }
 }
 
+// Let's the user see what device they are setting when in Access mode
 void deviceReset(){
   Serial.println("Device Select");
   digitalWrite(ledPinList[deviceSelect], LOW);
@@ -95,19 +118,33 @@ void deviceReset(){
   digitalWrite(ledPinList[deviceSelect], HIGH);
 }
 
-void client_status() {
+// Checks the client connected to the Access point and stores their MAC at the selected LED
+bool client_status() {
   struct station_info *stat_info;
   stat_info = wifi_softap_get_station_info();
   
-  while (stat_info != NULL) {
+  if (stat_info != NULL) {
+    digitalWrite(ledPinList[deviceSelect], LOW);
+    delay(200);
+    digitalWrite(ledPinList[deviceSelect], HIGH);
+    delay(200);
+    digitalWrite(ledPinList[deviceSelect], LOW);
+    delay(200);
+    digitalWrite(ledPinList[deviceSelect], HIGH);
+    int storeAddr = deviceSelect * 6;
     for (int i = 0; i < 6; i++){
       friendmac[deviceSelect][i] = stat_info->bssid[i];
+      EEPROM.put((storeAddr + i), friendmac[deviceSelect][i]);
+      EEPROM.commit(); 
     }
     stat_info = STAILQ_NEXT(stat_info, next);
     delay(300);
+    return true;
   }
+  return false;
 }
 
+// Part of MAC address checking
 bool maccmp(uint8_t *mac1, uint8_t *mac2) {
   for (int i=0; i < ESPPL_MAC_LEN; i++){
     if (mac1[i] != mac2[i]) {
@@ -117,6 +154,7 @@ bool maccmp(uint8_t *mac1, uint8_t *mac2) {
   return true;
 }
 
+// Prints information to Serial about what devices are being detected
 void printWhosHere(int person){
   time_s = millis();
   int difference = time_s / 1000 - lastSeen[person];
@@ -131,10 +169,9 @@ void printWhosHere(int person){
   lastSeen[person] = time_s / 1000;
   digitalWrite(ledPinList[person], HIGH);
   LEDState[person] = 1;
-
-  Serial.printf("%d\t%d\t%s\r\n", time_s, delayTime[person], friendname[person].c_str());
 }
 
+// Checks the packets in the air against the MAC addresses stored
 void cb(esppl_frame_info *info) {
   for (int i = 0; i < DEVICEAMOUNT; i++) {
     if (maccmp(info->sourceaddr, friendmac[i]) || maccmp(info->receiveraddr, friendmac[i])) {
@@ -143,6 +180,7 @@ void cb(esppl_frame_info *info) {
   }
 }
 
+// Main program loop that checks if people are here and if the FLASH button is pressed
 void loop() {
   esppl_sniffing_start();
   while (true) {
@@ -166,10 +204,15 @@ void loop() {
       delay(200);
       server.handleClient();    
       delay(200);
-      client_status();
+      if (client_status()){
+        break;
+      }
       delay(100);
     }
     if (ACMode == true){
+      blinkLED(false);
+      delay(100);
+      blinkLED(false);
       resetState();
       ACMode = false;
     }
