@@ -3,19 +3,18 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
 #include <EEPROM.h>
-#include "Settings.h"
 #include "./esppl_functions.h"
 
 /* configuration  wifi */
 const char *ssid = "Donkey 2 Electric Boogaloo";
+const int DEVICEAMOUNT = 4;
 
 ESP8266WebServer server(80);
 
-uint8_t friendmac[DEVICEAMOUNT][ESPPL_MAC_LEN] = DEVICEMAC;
-String friendname[DEVICEAMOUNT] = NAME;
+uint8_t friendmac[DEVICEAMOUNT][ESPPL_MAC_LEN];
 unsigned long time_s;
 unsigned long lastSeen[DEVICEAMOUNT];
-const byte ledPinList[DEVICEAMOUNT] = PINS;
+const byte ledPinList[DEVICEAMOUNT] = {D2, D1, D0, D5};
 // Time to light up each LED in seconds
 // Optimises over time
 int delayTime[DEVICEAMOUNT] = {5, 5, 5, 5};
@@ -99,7 +98,6 @@ void resetState(){
   delay(200);
   esppl_sniffing_start();
   for (int i = 0; i < DEVICEAMOUNT; i++){
-    Serial.printf("Name: %s, Check: %d\n", friendname[i].c_str(), LEDState[i]);
     if (LEDState[i] == 1){
       digitalWrite(ledPinList[i], HIGH);
       lastSeen[i] = millis() / 1000;
@@ -171,8 +169,6 @@ void printWhosHere(int person){
   lastSeen[person] = time_s / 1000;
   digitalWrite(ledPinList[person], HIGH);
   LEDState[person] = 1;
-
-  Serial.printf("%d\t%d\t%s\r\n", time_s, delayTime[person], friendname[person].c_str());
 }
 
 // Checks the packets in the air against the MAC addresses stored
