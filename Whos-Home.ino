@@ -201,9 +201,7 @@ void loop() {
     unsigned int AccessTime = millis() / 1000;
     while (AccessTime + 30 > (millis() / 1000)){
       DeviceButton.read();
-      delay(200);
-      server.handleClient();    
-      delay(200);
+      server.handleClient();
       if (client_status()){
         break;
       }
